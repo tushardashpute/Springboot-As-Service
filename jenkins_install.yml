@@ -1,0 +1,54 @@
+---
+- hosts: jenkins
+  tasks:
+  - name: check if java is installed
+    stat:
+      path: /usr/lib/jvm
+    register: java_path
+
+  - name: Install Java
+    yum: 
+     name: java-1.8.0-openjdk-devel
+     state: present
+    when: java_path.stat.exists == False
+
+  - name: Install wget/git/curl/maven packages
+    package:
+      name: "{{ item }}"  
+      state: present
+    loop:
+      - wget
+      - git
+      - curl
+      - maven
+
+  - name: Verify Jenkins
+    stat: 
+      path: /etc/yum.repos.d/jenkins.repo
+    register: jenkins_path
+
+  - name: download jenkins repo
+    get_url:
+        url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+        dest: /etc/yum.repos.d
+        mode: 0666
+    when: jenkins_path.stat.exists == False
+
+  - name: set the jenkins key
+    rpm_key:
+       state: present  
+       key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+  - name: install jenkins
+    yum:  
+       name: jenkins
+       state: present
+
+  - name: start jenkins service
+    service:
+       name: jenkins
+       state: started
+       enabled: true
+
+
+

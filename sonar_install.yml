@@ -1,0 +1,55 @@
+---
+ - name: creating sonar users - installations
+   hosts: sonar
+   tasks:
+    - name: Create the sonar user for running the SonarQube services
+      user:
+        name: sonar
+        comment: system user for running Sonar
+    - name: Download SonarQube
+      get_url:
+        url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-7.6.zip"
+        dest: "/srv"
+
+    - name: Extract SonarQube
+      unarchive:
+        src: "/srv/sonarqube-7.6.zip"
+        dest: "/srv"
+        copy: no
+        owner: sonar
+
+    - name: Configure SonarQube DB username
+      lineinfile:
+          path: "/srv/sonarqube-7.6/conf/sonar.properties"
+          regexp: "^sonar.jdbc.username="
+          insertafter: "^#sonar.jdbc.username="
+          line: "sonar.jdbc.username=sonar"
+
+    - name: Configure SonarQube DB password
+      lineinfile:
+          path: "/srv/sonarqube-7.6/conf/sonar.properties"
+          regexp: "^sonar.jdbc.password="
+          insertafter: "^#sonar.jdbc.password="
+          line: "sonar.jdbc.password=sonar"
+
+    - name: Configure SonarQube DB connection string
+      lineinfile:
+          path: "/srv/sonarqube-7.6/conf/sonar.properties"
+          regexp: "sonar.jdbc.url=jdbc:postgresql://localhost/sonar"
+          insertafter: "^#sonar.jdbc.url=jdbc:postgresql://localhost/sonar"
+          line: "sonar.jdbc.url=jdbc:postgresql://54.82.212.223/sonar"
+
+    - name: Configure SonarQube to run as the sonar user
+      lineinfile:
+          path: "/srv/sonarqube-7.6/bin/linux-x86-64/sonar.sh"
+          regexp: "RUN_AS_USER=sonar"
+          insertafter: "#RUN_AS_USER="
+          line: "RUN_AS_USER=sonar"
+
+
+    - name: Enable the SonarQube service
+      systemd:
+            state: started
+            enabled: yes
+            daemon_reload: yes
+            name: sonarqube
